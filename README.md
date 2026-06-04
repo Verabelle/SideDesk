@@ -21,10 +21,12 @@
 1. 下载并安装 [Lively Wallpaper](https://rocksdanister.com/lively/)（官网或 Microsoft Store），安装一般直接一直下一步就可以了。
 2. 打开 Lively，将 `SideDesk.html` 文件直接拖入主窗口
 3. 点击「设为壁纸」即可
+4. 数据在电脑关机重启后会消失，我有时间整整(可能后续不会使用livwly wallpaper)只要不关机的话，数据理论上就能一直保留。
 
 ### 方式二：直接浏览器打开
 
 双击 `SideDesk.html`，使用 Chrome / Edge 打开即可使用。
+数据可以长时间保留
 
 ## 🖼️ 更换卡片背景图片
 
