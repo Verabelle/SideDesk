@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>桌面侧卡 · 日历待办</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* ========== 设置桌面背景图片（请修改 url 中的路径） ========== */
+        body {
+            /* 
+             * 请将下面 url('') 中的内容替换为你自己的壁纸图片路径 
+             * 支持本地路径：'file:///C:/你的图片.jpg' 或相对路径 'wallpaper.jpg'
+             * 也支持网络图片：'https://example.com/image.jpg'
+             */
+            background: url('SpongeBob.jpg') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Segoe UI', 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        /* ======================================================== */
+
+        .side-card {
+            width: 33vw;
+            max-width: 460px;
+            min-width: 280px;
+            background: rgba(30, 28, 38, 0.75);
+            backdrop-filter: blur(16px);
+            border-radius: 32px;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+            color: #f0ede8;
+            transition: all 0.2s ease;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .side-card:active {
+            cursor: grabbing;
+        }
+
+        .drag-area {
+            padding: 16px 20px 8px 20px;
+            cursor: grab;
+            background: rgba(255,255,255,0.05);
+            border-radius: 32px 32px 0 0;
+        }
+
+        .drag-area:active {
+            cursor: grabbing;
+        }
+
+        .date-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .date-greeting {
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+        .date-week {
+            font-size: 14px;
+            opacity: 0.7;
+            margin-bottom: 6px;
+        }
+        .task-summary {
+            font-size: 13px;
+            background: rgba(0,0,0,0.3);
+            padding: 4px 12px;
+            border-radius: 40px;
+            display: inline-block;
+        }
+
+        .todo-section, .overdue-section, .calendar-section {
+            padding: 8px 20px 12px 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .todo-list, .overdue-list {
+            list-style: none;
+            margin-bottom: 12px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .todo-item, .overdue-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 14px;
+        }
+
+        .todo-item input[type="checkbox"], .overdue-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #7c6ef0;
+            cursor: pointer;
+        }
+
+        .todo-text, .overdue-text {
+            flex: 1;
+            word-break: break-word;
+            cursor: pointer;
+        }
+
+        /* 已完成任务样式：灰色 + 删除线 */
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: #aaa;
+            opacity: 0.7;
+        }
+
+        .delete-task {
+            background: none;
+            border: none;
+            color: #ffaa88;
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0.5;
+            transition: 0.1s;
+        }
+        .delete-task:hover {
+            opacity: 1;
+        }
+
+        .add-todo {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .add-todo input {
+            flex: 1;
+            background: rgba(255,255,255,0.15);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 28px;
+            color: white;
+            font-size: 13px;
+            outline: none;
+        }
+        .add-todo input::placeholder {
+            color: #ccc;
+        }
+        .add-todo button {
+            background: #7c6ef0;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .move-back-btn {
+            background: rgba(255,215,130,0.2);
+            border: none;
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 30px;
+            color: #ffde9c;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            text-align: center;
+            margin: 12px 0;
+            font-size: 12px;
+        }
+        .cal-weekday {
+            color: #bbbbbb;
+            font-weight: 500;
+        }
+        .cal-day {
+            background: rgba(255,255,255,0.08);
+            padding: 6px 0;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .cal-day:hover {
+            background: #7c6ef0;
+        }
+        .cal-day.selected {
+            background: #7c6ef0;
+            font-weight: bold;
+        }
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .cal-header button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px 12px;
+        }
+
+        .footer-note {
+            font-size: 10px;
+            text-align: center;
+            padding: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            opacity: 0.6;
+        }
+
+        /* 逾期无任务时隐藏整个区块 */
+        .overdue-section.hide-overdue {
+            display: none;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="side-card" id="sideCard">
+    <div class="drag-area" id="dragHandle">
+        <div class="date-header">
+            <span class="date-greeting" id="todayDate">加载中...</span>
+            <span class="task-summary" id="taskCount">今日0项</span>
+        </div>
+        <div class="date-week" id="weekday"></div>
+    </div>
+
+    <div class="todo-section">
+        <div class="section-title">📋 今日待办</div>
+        <ul class="todo-list" id="todoList"></ul>
+        <div class="add-todo">
+            <input type="text" id="newTodoInput" placeholder="写新任务... 回车添加" autocomplete="off">
+            <button id="addTodoBtn">＋</button>
+        </div>
+    </div>
+
+    <!-- 逾期区域：无任务时通过CSS隐藏 -->
+    <div class="overdue-section" id="overdueSection">
+        <div class="section-title">⏰ 逾期未完成</div>
+        <ul class="overdue-list" id="overdueList"></ul>
+    </div>
+
+    <div class="calendar-section">
+        <div class="cal-header">
+            <button id="prevMonthBtn">◀</button>
+            <span id="monthYear"></span>
+            <button id="nextMonthBtn">▶</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div style="font-size: 11px; margin-top: 6px; opacity:0.7;" id="selectedHint">点击日期查看历史/计划</div>
+    </div>
+    <div class="footer-note">
+        ✨ 双击任务编辑 | 删除按钮🗑️ | 逾期可移回今天
+    </div>
+</div>
+
+<script>
+    // ---------- 数据模型 ----------
+    let tasksDB = {};      // "2026-06-04": [ {id, text, completed} ]
+    let currentViewDate = new Date();
+    let selectedDateStr = getTodayStr();
+
+    function getTodayStr() {
+        let d = new Date();
+        return d.toISOString().slice(0,10);
+    }
+
+    function initStorage() {
+        let stored = localStorage.getItem("SideDesk_Tasks");
+        if(stored) {
+            tasksDB = JSON.parse(stored);
+        } else {
+            let today = getTodayStr();
+            let yesterday = new Date();
+            yesterday.setDate(yesterday.getDate()-1);
+            let yStr = yesterday.toISOString().slice(0,10);
+            tasksDB = {
+                [today]: [
+                    { id: Date.now()+1, text: "买菜", completed: false },
+                    { id: Date.now()+2, text: "回复邮件", completed: false }
+                ],
+                [yStr]: [
+                    { id: Date.now()+3, text: "交水电费", completed: false },
+                    { id: Date.now()+4, text: "看牙医预约", completed: false }
+                ]
+            };
+        }
+        if(!tasksDB[getTodayStr()]) tasksDB[getTodayStr()] = [];
+        saveToLocal();
+    }
+    function saveToLocal() {
+        localStorage.setItem("SideDesk_Tasks", JSON.stringify(tasksDB));
+    }
+
+    // 获取某天任务（未完成在上，已完成在下）
+    function getSortedTasksOfDate(dateStr) {
+        let tasks = tasksDB[dateStr] || [];
+        let incomplete = tasks.filter(t => !t.completed);
+        let complete = tasks.filter(t => t.completed);
+        return [...incomplete, ...complete];
+    }
+
+    // 获取逾期任务（所有过去日期的未完成任务）
+    function getOverdueTasks() {
+        let todayStr = getTodayStr();
+        let overdue = [];
+        for(let date in tasksDB) {
+            if(date < todayStr) {
+                tasksDB[date].forEach(task => {
+                    if(!task.completed) {
+                        overdue.push({ ...task, originalDate: date });
+                    }
+                });
+            }
+        }
+        return overdue;
+    }
+
+    function moveTaskToToday(originalDate, taskId) {
+        let sourceTasks = tasksDB[originalDate];
+        if(!sourceTasks) return;
+        let index = sourceTasks.findIndex(t => t.id == taskId);
+        if(index !== -1) {
+            let [moved] = sourceTasks.splice(index, 1);
+            moved.completed = false;
+            let todayStr = getTodayStr();
+            if(!tasksDB[todayStr]) tasksDB[todayStr] = [];
+            tasksDB[todayStr].push(moved);
+            saveToLocal();
+            renderAll();
+        }
+    }
+
+    function addTaskToSelected(text) {
+        if(!text.trim()) return;
+        if(!tasksDB[selectedDateStr]) tasksDB[selectedDateStr] = [];
+        tasksDB[selectedDateStr].push({
+            id: Date.now(),
+            text: text.trim(),
+            completed: false
+        });
+        saveToLocal();
+        renderAll();
+    }
+
+    function deleteTask(dateStr, taskId) {
+        let tasks = tasksDB[dateStr];
+        if(tasks) {
+            tasksDB[dateStr] = tasks.filter(t => t.id != taskId);
+            saveToLocal();
+            renderAll();
+        }
+    }
+
+    function toggleComplete(dateStr, taskId, completed) {
+        let tasks = tasksDB[dateStr];
+        if(tasks) {
+            let task = tasks.find(t => t.id == taskId);
+            if(task) task.completed = completed;
+            saveToLocal();
+            renderAll();
+        }
+    }
+
+    function editTaskText(dateStr, taskId, newText) {
+        if(!newText.trim()) return;
+        let tasks = tasksDB[dateStr];
+        if(tasks) {
+            let task = tasks.find(t => t.id == taskId);
+            if(task) task.text = newText.trim();
+            saveToLocal();
+            renderAll();
+        }
+    }
+
+    function renderAll() {
+        let today = new Date();
+        document.getElementById("todayDate").innerHTML = `${today.getMonth()+1}/${today.getDate()}`;
+        const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+        document.getElementById("weekday").innerHTML = weekdays[today.getDay()];
+
+        // 今日待办（排序后）
+        let sortedTasks = getSortedTasksOfDate(selectedDateStr);
+        let todoContainer = document.getElementById("todoList");
+        todoContainer.innerHTML = "";
+        sortedTasks.forEach(task => {
+            let li = document.createElement("li");
+            li.className = "todo-item" + (task.completed ? " completed" : "");
+            li.innerHTML = `
+                <input type="checkbox" ${task.completed ? "checked" : ""} data-id="${task.id}" data-date="${selectedDateStr}">
+                <span class="todo-text" data-id="${task.id}">${escapeHtml(task.text)}</span>
+                <button class="delete-task" data-id="${task.id}" data-date="${selectedDateStr}">🗑️</button>
+            `;
+            todoContainer.appendChild(li);
+        });
+        document.getElementById("taskCount").innerText = `今日${sortedTasks.length}项`;
+
+        // 逾期区域：无任务时隐藏整个区块
+        let overdueTasks = getOverdueTasks();
+        const overdueSection = document.getElementById("overdueSection");
+        const overdueContainer = document.getElementById("overdueList");
+        if(overdueTasks.length === 0) {
+            overdueSection.classList.add("hide-overdue");
+        } else {
+            overdueSection.classList.remove("hide-overdue");
+            overdueContainer.innerHTML = "";
+            overdueTasks.forEach(task => {
+                let li = document.createElement("li");
+                li.className = "overdue-item";
+                li.innerHTML = `
+                    <span>⚠️</span>
+                    <span class="overdue-text" style="flex:1">${escapeHtml(task.text)} <span style="font-size:10px; opacity:0.6;">(原定${task.originalDate})</span></span>
+                    <button class="move-back-btn" data-originaldate="${task.originalDate}" data-id="${task.id}">移回今天</button>
+                    <button class="delete-task" data-date="${task.originalDate}" data-id="${task.id}" style="background:none;">🗑️</button>
+                `;
+                overdueContainer.appendChild(li);
+            });
+        }
+
+        // 绑定事件（使用事件委托避免重复绑定）
+        bindEvents();
+        renderCalendar();
+        document.getElementById("selectedHint").innerText = `📅 正在查看: ${selectedDateStr} 的任务`;
+    }
+
+    function bindEvents() {
+        // 复选框
+        document.querySelectorAll('.todo-item input[type="checkbox"]').forEach(cb => {
+            cb.removeEventListener('change', handleCheck);
+            cb.addEventListener('change', handleCheck);
+        });
+        // 删除按钮（今日待办）
+        document.querySelectorAll('.todo-item .delete-task').forEach(btn => {
+            btn.removeEventListener('click', handleDelete);
+            btn.addEventListener('click', handleDelete);
+        });
+        // 逾期区域按钮
+        document.querySelectorAll('.move-back-btn').forEach(btn => {
+            btn.removeEventListener('click', handleMoveBack);
+            btn.addEventListener('click', handleMoveBack);
+        });
+        document.querySelectorAll('.overdue-item .delete-task').forEach(btn => {
+            btn.removeEventListener('click', handleOverdueDelete);
+            btn.addEventListener('click', handleOverdueDelete);
+        });
+        // 双击编辑
+        document.querySelectorAll('.todo-text').forEach(span => {
+            span.ondblclick = (e) => {
+                let id = span.dataset.id;
+                let oldText = span.innerText;
+                let newText = prompt("编辑任务", oldText);
+                if(newText && newText !== oldText) {
+                    editTaskText(selectedDateStr, id, newText);
+                }
+            };
+        });
+    }
+
+    function handleCheck(e) {
+        let cb = e.currentTarget;
+        let id = cb.dataset.id;
+        let date = cb.dataset.date;
+        toggleComplete(date, id, cb.checked);
+    }
+    function handleDelete(e) {
+        let btn = e.currentTarget;
+        let id = btn.dataset.id;
+        let date = btn.dataset.date;
+        deleteTask(date, id);
+    }
+    function handleMoveBack(e) {
+        let btn = e.currentTarget;
+        let origDate = btn.dataset.originaldate;
+        let id = btn.dataset.id;
+        moveTaskToToday(origDate, id);
+    }
+    function handleOverdueDelete(e) {
+        let btn = e.currentTarget;
+        let id = btn.dataset.id;
+        let date = btn.dataset.date;
+        deleteTask(date, id);
+    }
+
+    function renderCalendar() {
+        let year = currentViewDate.getFullYear();
+        let month = currentViewDate.getMonth();
+        let firstDay = new Date(year, month, 1);
+        let startWeek = firstDay.getDay();
+        let daysInMonth = new Date(year, month+1, 0).getDate();
+        let grid = document.getElementById("calendarGrid");
+        grid.innerHTML = "";
+        ['日','一','二','三','四','五','六'].forEach(w => {
+            let div = document.createElement("div");
+            div.className = "cal-weekday";
+            div.innerText = w;
+            grid.appendChild(div);
+        });
+        for(let i=0; i<startWeek; i++) {
+            let empty = document.createElement("div");
+            grid.appendChild(empty);
+        }
+        for(let d=1; d<=daysInMonth; d++) {
+            let cell = document.createElement("div");
+            cell.className = "cal-day";
+            let dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            cell.innerText = d;
+            if(dateStr === selectedDateStr) cell.classList.add("selected");
+            cell.addEventListener("click", () => {
+                selectedDateStr = dateStr;
+                renderAll();
+            });
+            grid.appendChild(cell);
+        }
+        document.getElementById("monthYear").innerText = `${year}年 ${month+1}月`;
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 拖拽移动卡片
+    function makeDraggable() {
+        const card = document.getElementById("sideCard");
+        const dragHandle = document.getElementById("dragHandle");
+        let offsetX, offsetY, startX, startY, isDragging = false;
+        dragHandle.addEventListener("mousedown", (e) => {
+            if(e.target.closest('.add-todo') || e.target.closest('.delete-task') || e.target.closest('.move-back-btn')) return;
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = card.getBoundingClientRect();
+            offsetX = startX - rect.left;
+            offsetY = startY - rect.top;
+            card.style.cursor = "grabbing";
+            e.preventDefault();
+        });
+        window.addEventListener("mousemove", (e) => {
+            if(!isDragging) return;
+            let left = e.clientX - offsetX;
+            let top = e.clientY - offsetY;
+            card.style.position = "fixed";
+            card.style.left = left + "px";
+            card.style.top = top + "px";
+            card.style.right = "auto";
+            card.style.bottom = "auto";
+        });
+        window.addEventListener("mouseup", () => {
+            isDragging = false;
+            card.style.cursor = "";
+        });
+    }
+
+    // 初始化
+    document.addEventListener("DOMContentLoaded", () => {
+        initStorage();
+        renderAll();
+        makeDraggable();
+        const addBtn = document.getElementById("addTodoBtn");
+        const newInput = document.getElementById("newTodoInput");
+        addBtn.addEventListener("click", () => { addTaskToSelected(newInput.value); newInput.value = ""; });
+        newInput.addEventListener("keypress", (e) => { if(e.key === "Enter") { addTaskToSelected(newInput.value); newInput.value = ""; } });
+        document.getElementById("prevMonthBtn").addEventListener("click", () => { currentViewDate.setMonth(currentViewDate.getMonth()-1); renderCalendar(); });
+        document.getElementById("nextMonthBtn").addEventListener("click", () => { currentViewDate.setMonth(currentViewDate.getMonth()+1); renderCalendar(); });
+    });
+</script>
+</body>
+</html>
